@@ -63,3 +63,48 @@ barplot(height = totalEmissionsBaltimore$Emissions,
 # Which have seen increases in emissions from 1999-2008? 
 # Use the ggplot2 plotting system to make a plot answer this question.
 library(ggplot2)
+library(maps)
+library(reshape)
+
+totalEmissionsBaltByType <- aggregate(baltimoreNEI$Emissions, list(baltimoreNEI$type, baltimoreNEI$year), FUN = sum)
+colnames(totalEmissionsBaltByType) <- c("Type", "Year", "Total")
+totalEmissionsBaltByType[, 1] <- as.factor(totalEmissionsBaltByType[, 1])
+totalEmissionsBaltByType[, 2] <- as.factor(totalEmissionsBaltByType[, 2])
+qplot(x = Year, 
+      y = Total, 
+      fill = Type, 
+      data = totalEmissionsBaltByType, 
+      geom = "bar", 
+      stat = "identity", 
+      position = "dodge",
+      main = "Emissions per Year by Type\n Baltimore City, Maryland",
+      ylab = expression("Total PM"[2.5])) +
+      theme(plot.title = element_text(face = "bold", size = "16"))
+
+# Across the United States, how have emissions from
+# coal combustion-related sources changed from 1999-2008?
+
+# Subset NEI data to only include emissions from combustion data
+combustSCC <- SCC[grepl("[Cc]ombust", SCC$Short.Name) | 
+                  grepl("[Cc]ombust", SCC$EI.Sector) | 
+                  grepl("[Cc]ombust", SCC$SCC.Level.One) | 
+                  grepl("[Cc]ombust", SCC$SCC.Level.Two) | 
+                  grepl("[Cc]ombust", SCC$SCC.Level.Three), ]
+
+combustNEI <- NEI[NEI$SCC %in% unique(combustSCC$SCC), ]
+combustNEI$fips <- as.integer(combustNEI$fips) # Converting fips to integers have revealed some NA values, such as "   NA" or "TR207".
+
+# Find the total combustion emissions per county
+totalCombustEmiss <- aggregate(combustNEI$Emissions, list(combustNEI$fips, combustNEI$year), FUN = sum)
+colnames(totalCombustEmiss) <- c("fips", "year", "emissions")
+
+# Get the percent change of total emissions between 1999 and 2008 for each fips.
+totalCombustChange <- melt(totalCombustEmiss, id = c("fips"), na.rm = TRUE)
+totalCombustChange <- cast(totalCombustEmiss, fips ~ year)
+totalCombustChange$change <- (totalCombustChange[, 5] - totalCombustChange[, 2]) / totalCombustChange[, 2]
+
+totalCombustChange$change <- round(totalCombustChange$change, 4)
+
+map("county")
+data(county.fips)
+
