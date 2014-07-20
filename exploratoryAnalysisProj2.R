@@ -84,12 +84,17 @@ qplot(x = Year,
 # Across the United States, how have emissions from
 # coal combustion-related sources changed from 1999-2008?
 
-# Subset NEI data to only include emissions from combustion data
+# Subset NEI data to only include emissions from coal combustion data
 combustSCC <- SCC[grepl("[Cc]ombust", SCC$Short.Name) | 
                   grepl("[Cc]ombust", SCC$EI.Sector) | 
                   grepl("[Cc]ombust", SCC$SCC.Level.One) | 
                   grepl("[Cc]ombust", SCC$SCC.Level.Two) | 
                   grepl("[Cc]ombust", SCC$SCC.Level.Three), ]
+combustSCC <- combustSCC[grepl("[Cc]oal", combustSCC$Short.Name) | 
+                         grepl("[Cc]oal", combustSCC$EI.Sector) | 
+                         grepl("[Cc]oal", combustSCC$SCC.Level.One) | 
+                         grepl("[Cc]oal", combustSCC$SCC.Level.Two) | 
+                         grepl("[Cc]oal", combustSCC$SCC.Level.Three), ]
 
 combustNEI <- NEI[NEI$SCC %in% unique(combustSCC$SCC), ]
 combustNEI$fips <- as.integer(combustNEI$fips) # Converting fips to integers have revealed some NA values, such as "   NA" or "TR207".
