@@ -107,9 +107,13 @@ colnames(totalCombustEmiss) <- c("fips", "year", "emissions")
 totalCombustChange <- melt(totalCombustEmiss, id = c("fips"), na.rm = TRUE)
 totalCombustChange <- cast(totalCombustEmiss, fips ~ year)
 totalCombustChange$change <- (totalCombustChange[, 5] - totalCombustChange[, 2]) / totalCombustChange[, 2]
-
 totalCombustChange$change <- round(totalCombustChange$change, 4)
 
-map("county")
-data(county.fips)
+totalCombustChange <- merge(totalCombustChange, county.fips, by = "fips")
+totalCombustChange$change[is.na(totalCombustChange$change)] <- 0
+totalCombustChange$colorBuckets <- as.numeric(cut(totalCombustChange$change, c(-2, 0, 2, 4, 6, 8, 10, 100, 1000, 2000)))
+colorsMatched <- totalCombustChange$colorBuckets[match(county.fips$fips, totalCombustChange$fips)]
+colors = c("#F1EEF6", "#D4B9DA", "#C994C7", "#DF65B0", "#DD1C77", "#980043")
+map("county", col = colors[colorsMatched], fill = TRUE, resolution = 0, lty = 0, projection = "polyconic")
+
 
