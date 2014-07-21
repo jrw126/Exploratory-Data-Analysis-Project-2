@@ -152,3 +152,16 @@ color.legend(xl = legCoords[1] * .85,
              gradient = "x")
 
 totalCombustChange[order(totalCombustChange$change), ]
+
+# How have emissions from motor vehicle sources changed from 1999-2008 in Baltimore City?
+# Subset NEI data to include baltimore only
+baltimoreNEI <- NEI[NEI$fips == "24510", ]
+
+# Subset SCC data to include motor vehicle sources only
+# http://www.epa.gov/ttn/chief/net/2011nei/2011_nei_tsdv1_draft2_june2014.pdf
+motorSCC <- SCC[grepl("[Mm]otor", SCC$Short.Name) | 
+                grepl("[Mm]otor", SCC$EI.Sector) | 
+                grepl("[Mm]otor", SCC$SCC.Level.One) | 
+                grepl("[Mm]otor", SCC$SCC.Level.Two) | 
+                grepl("[Mm]otor", SCC$SCC.Level.Three), ]
+motorSCC <- motorSCC[grepl("^(?!Point).*$", as.character(motorSCC$Data.Category), perl = TRUE), ]
