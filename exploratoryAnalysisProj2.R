@@ -219,17 +219,20 @@ LABaltNEI <- aggregate(Emissions ~ year + fips, data = LABaltNEI, FUN = sum)
 pairs <- c(1999, 2002, 2005, 2008)
 change <- round(data.frame(sapply(1:3, FUN = function(x) 
                           (LABaltNEI$Emissions[LABaltNEI$year == pairs[x + 1]] - LABaltNEI$Emissions[LABaltNEI$year == pairs[x]]) / 
-                           LABaltNEI$Emissions[LABaltNEI$year == pairs[x]])), 4)
+                           LABaltNEI$Emissions[LABaltNEI$year == pairs[x]])) * 100, 1)
 change <- rbind(t(change[1,]),t(change[2,]))
-change <- cbind(rep(c("1999 to 2002", "2002 to 2005", "2005 to 2008"), 2), c(rep("06037", 3), rep("24510", 3)), change)
+change <- as.data.frame(cbind(rep(c("1999 to 2002", "2002 to 2005", "2005 to 2008"), 2), c(rep("Los Angeles", 3), rep("Baltimore", 3)), change))
+colnames(change) <- c("Period", "City", "Change")
 
-qplot(x = Year, 
-      y = Total, 
-      fill = Type, 
-      data = totalEmissionsBaltByType, 
+change$Change <- as.numeric(as.character(change$Change))
+
+qplot(x = Period, 
+      y = Change, 
+      fill = City, 
+      data = change, 
       geom = "bar", 
       stat = "identity", 
       position = "dodge",
-      main = "Emissions per Year by Type\n Baltimore City, Maryland",
-      ylab = expression("Total PM"[2.5])) +
+      main = "Motor Vehicle Emissions\n Baltimore vs Los Angeles",
+      ylab = expression("1 Year % Change in Total PM"[2.5])) +
       theme(plot.title = element_text(face = "bold", size = "16"))
