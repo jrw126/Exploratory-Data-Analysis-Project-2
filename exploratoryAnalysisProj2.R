@@ -59,6 +59,7 @@ barplot(height = totalEmissionsBaltimore$Emissions,
 # Use the ggplot2 plotting system to make a plot answer this question.
 library(ggplot2)
 library(sqldf)
+library(reshape)
 library(maps)
 library(RColorBrewer)
 # library(reshape)
@@ -158,6 +159,8 @@ totalCombustChange[order(totalCombustChange$change), ]
 baltimoreNEI <- NEI[NEI$fips == "24510", ]
 
 # Subset SCC data to include motor vehicle sources only
+# Using anything from the NEI data that is type == "ON-ROAD" or where motor vehicles
+# are mentioned in the SCC description.
 # http://www.epa.gov/ttn/chief/net/2011nei/2011_nei_tsdv1_draft2_june2014.pdf
 motorSCC <- SCC[grepl("[Mm]otor", SCC$Short.Name) | 
                 grepl("[Mm]otor", SCC$EI.Sector) | 
@@ -165,3 +168,68 @@ motorSCC <- SCC[grepl("[Mm]otor", SCC$Short.Name) |
                 grepl("[Mm]otor", SCC$SCC.Level.Two) | 
                 grepl("[Mm]otor", SCC$SCC.Level.Three), ]
 motorSCC <- motorSCC[grepl("^(?!Point).*$", as.character(motorSCC$Data.Category), perl = TRUE), ]
+
+# Get motor vehicle emissions data for baltimore
+baltimoreNEI <- sqldf("SELECT
+                      b.fips
+                      ,b.SCC
+                      ,b.Pollutant
+                      ,b.Emissions
+                      ,b.type
+                      ,b.year
+                      FROM baltimoreNEI b
+                      JOIN motorSCC s ON b.SCC = s.SCC")
+baltimoreNEI <- rbind(NEI[NEI$fips == "24510" & NEI$type == "ON-ROAD", ], baltimoreNEI)
+baltimoreNEI <- baltimoreNEI[!duplicated(baltimoreNEI), ]
+motorEmissionsBaltimore <- round(aggregate(Emissions ~ year, data = baltimoreNEI, FUN = sum), 2)
+qplot(x = as.factor(year),
+      y = Emissions,
+      data = motorEmissionsBaltimore,
+      geom = "bar",
+      stat = "identity",
+      xlab = "Year",
+      ylab = expression("Total PM"[2.5]),
+      main = "Total Emissions from Motor Vehicles\n Baltimore, Maryland") +
+      theme(plot.title = element_text(face = "bold", size = "16"))
+
+# Compare emissions from motor vehicle sources in Baltimore City with emissions from motor 
+# vehicle sources in Los Angeles County, California (fips == "06037"). Which city has 
+# seen greater changes over time in motor vehicle emissions?
+LABaltNEI <- NEI[NEI$fips == "24510" | NEI$fips == "06037", ]
+LABaltNEI <- sqldf("SELECT
+                   b.fips
+                   ,b.SCC
+                   ,b.Pollutant
+                   ,b.Emissions
+                   ,b.type
+                   ,b.year
+                   FROM LABaltNEI b
+                   JOIN motorSCC s ON b.SCC = s.SCC")
+LABaltNEI <- rbind(NEI[NEI$fips == "24510" | NEI$fips == "06037" & NEI$type == "ON-ROAD", ], LABaltNEI)
+LABaltNEI <- LABaltNEI[!duplicated(LABaltNEI), ]
+LABaltNEI <- aggregate(Emissions ~ year + fips, data = LABaltNEI, FUN = sum)
+# motorEmissionsBaltVsLA <- melt(LABaltNEI, id.vars = c("fips", "year"), measure.vars = c("Emissions"))
+# motorEmissionsBaltVsLA <- cast(motorEmissionsBaltVsLA, fips ~ year)
+# motorEmissionsBaltVsLA$changePeriod1 <- (motorEmissionsBaltVsLA[, 3] - motorEmissionsBaltVsLA[, 2]) / motorEmissionsBaltVsLA[, 2]
+# motorEmissionsBaltVsLA$changePeriod2 <- (motorEmissionsBaltVsLA[, 4] - motorEmissionsBaltVsLA[, 3]) / motorEmissionsBaltVsLA[, 3]
+# motorEmissionsBaltVsLA$changePeriod3 <- (motorEmissionsBaltVsLA[, 5] - motorEmissionsBaltVsLA[, 4]) / motorEmissionsBaltVsLA[, 4]
+# motorEmissionsBaltVsLA <- motorEmissionsBaltVsLA[, c(1, 6, 7, 8)]
+# colnames(motorEmissionsBaltVsLA) <- c("fips", "1999 to 2002", "2002 to 2005", "2005 to 2008")
+
+pairs <- c(1999, 2002, 2005, 2008)
+change <- round(data.frame(sapply(1:3, FUN = function(x) 
+                          (LABaltNEI$Emissions[LABaltNEI$year == pairs[x + 1]] - LABaltNEI$Emissions[LABaltNEI$year == pairs[x]]) / 
+                           LABaltNEI$Emissions[LABaltNEI$year == pairs[x]])), 4)
+change <- rbind(t(change[1,]),t(change[2,]))
+change <- cbind(rep(c("1999 to 2002", "2002 to 2005", "2005 to 2008"), 2), c(rep("06037", 3), rep("24510", 3)), change)
+
+qplot(x = Year, 
+      y = Total, 
+      fill = Type, 
+      data = totalEmissionsBaltByType, 
+      geom = "bar", 
+      stat = "identity", 
+      position = "dodge",
+      main = "Emissions per Year by Type\n Baltimore City, Maryland",
+      ylab = expression("Total PM"[2.5])) +
+      theme(plot.title = element_text(face = "bold", size = "16"))
