@@ -35,7 +35,7 @@ LABaltNEI <- sqldf("SELECT
                    ,b.year
                    FROM LABaltNEI b
                    JOIN motorSCC s ON b.SCC = s.SCC")
-LABaltNEI <- rbind(NEI[NEI$fips == "24510" | NEI$fips == "06037" & NEI$type == "ON-ROAD", ], LABaltNEI)
+LABaltNEI <- rbind(NEI[(NEI$fips == "24510" | NEI$fips == "06037") & NEI$type == "ON-ROAD", ], LABaltNEI)
 LABaltNEI <- LABaltNEI[!duplicated(LABaltNEI), ]
 LABaltNEI <- aggregate(Emissions ~ year + fips, data = LABaltNEI, FUN = sum)
 pairs <- c(1999, 2002, 2005, 2008)
@@ -58,7 +58,7 @@ qplot(x = Period,
       stat = "identity", 
       position = "dodge",
       main = "Motor Vehicle Emissions\n Baltimore vs Los Angeles",
-      ylab = expression("1 Year % Change in Total PM"[2.5])) +
+      ylab = expression("1 Year % Change in PM"[2.5])) +
       theme(plot.title = element_text(face = "bold", size = "16"))
 
 # Save the plot to the working directory.
